@@ -6,12 +6,25 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+# Like express to build HTTP client buy async with tokio
 axum = { version = "0.6", features = ["json"] }
+
+# async/await like Promise
 tokio = { version = "1", features = ["macros"] }
+
+# Like express to build HTTP client
 hyper = { version = "0.14", features = ["full"] }
+
+# Like pgconn/active_record
 sqlx = { version = "0.6", features = [ "runtime-tokio-rustls", "postgres", "offline"] }
+
+# Like json, to convert data
 serde = { version = "1.0", features = ["derive"] }
+
+# Like try/catch
 anyhow = "1.0"
+
+# dotenv
 dotenvy = "0.15"
 
 [dev-dependencies]

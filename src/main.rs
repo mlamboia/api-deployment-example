@@ -1,3 +1,7 @@
+// https://medium.com/geekculture/implementing-pub-sub-pattern-in-rust-with-redis-publish-f0eeac3354b1
+// https://github.com/mlamboia/api-deployment-example
+// https://trello.com/b/l990kzkG/rustbull
+
 use axum::{
     extract::{self, Path},
     http::StatusCode,
@@ -11,30 +15,54 @@ use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
 
+// Example of import
+mod mylib;
+use mylib::example_bail::{divide};
+
+use mylib::redis_publisher;
+use mylib::redis_subscriber;
+use mylib::message;
+use mylib::message_handler;
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    dotenv().ok();
+  dotenv().ok();
 
-    let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set.");
+  if let Err(error) = redis_subscriber::subscribe(String::from("order ")) {
+    println!("{:?}", error);
+    panic!("{:?}", error);
+  } else {
+    println!("connected to queue");
+  }
 
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&url)
-        .await
-        .unwrap_or_else(|_| panic!("Failed to create Postgres connection pool! URL: {}", url));
+  // Example of import
+  // mylib is a dir that have a file mod.rs inside is possible to import all
+  // files from mylib and finally they can be used from main.
+  match divide(10.0, 0.0) {
+      Ok(result) => println!("Result: {}", result),
+      Err(error) => println!("Error: {}", error),
+  }
 
-    sqlx::migrate!("./migrations").run(&pool).await?;
+  let url: String = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set.");
 
-    let addr: std::net::SocketAddr = std::net::SocketAddr::from(([0, 0, 0, 0], 3000));
+  let pool: Pool<Postgres> = PgPoolOptions::new()
+      .max_connections(5)
+      .connect(&url)
+      .await
+      .unwrap_or_else(|_| panic!("Failed to create Postgres connection pool! URL: {}", url));
 
-    println!("listening on {}", addr);
+  sqlx::migrate!("./migrations").run(&pool).await?;
 
-    axum::Server::bind(&addr)
-        .serve(app().layer(Extension(pool)).into_make_service())
-        .await
-        .unwrap();
+  let addr: std::net::SocketAddr = std::net::SocketAddr::from(([0, 0, 0, 0], 3000));
 
-    Ok(())
+  println!("listening on {}", addr);
+
+  axum::Server::bind(&addr)
+      .serve(app().layer(Extension(pool)).into_make_service())
+      .await
+      .unwrap();
+
+  Ok(())
 }
 
 #[derive(Serialize, Deserialize)]
@@ -124,7 +152,7 @@ mod tests {
 
     #[tokio::test]
     async fn hello_world() {
-        let app = app();
+        let app: Router = app();
 
         // `Router` implements `tower::Service<Request<Body>>` so we can
         // call it like any tower service, no need to run an HTTP server.
@@ -135,7 +163,7 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: hyper::body::Bytes = hyper::body::to_bytes(response.into_body()).await.unwrap();
         assert_eq!(&body[..], b"Let's Get Rusty!");
     }
 }
